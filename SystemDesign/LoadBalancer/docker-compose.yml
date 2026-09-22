@@ -3,12 +3,29 @@ services:
     image: nginx:latest
     ports:
       - "8000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf # Nginx configuration file - it mainly contains the rules for routing the traffic to the backend servers 
+  node-server-1:
+    build: ./node-server
+    ports:
+      - "3003:3000"
+    environment:
+      SERVER_NAME: node-server-1
+  node-server-2:
+    build: ./node-server
+    ports:
+      - "3004:3000"
+    environment:
+      SERVER_NAME: node-server-2
+  node-server-3:
+    build: ./node-server
+    ports:
+      - "3005:3000"
+    environment:
+      SERVER_NAME: node-server-3
 #     volumes:
 #       - ./nginx.conf:/etc/nginx/nginx.conf # Nginx configuration file - it mainly contains the rules for routing the traffic to the backend servers
 #     networks:
 #       - loadbalancer-network # The network that the nginx container will be connected to
 
-# networks:
-#   loadbalancer-network:
-#     driver: bridge
-    # driver: bridge is used to create a bridge network - it is a network that allows the containers to communicate with each other
+# networks: 
