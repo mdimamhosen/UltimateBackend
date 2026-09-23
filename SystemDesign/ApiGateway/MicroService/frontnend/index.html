@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Design Studio: Nginx LB ➔ 3x Gateways ➔ 3 Microservices</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Studio Layout -->
+  <div class="studio-layout">
+    
+    <!-- Top Bar -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand-logo">
+          <div class="logo-mesh">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">SYSTEM DESIGN STUDIO</span>
+            <span class="brand-sub">Nginx L7 LB &bull; 3x Gateways &bull; 3 Services per Gateway</span>
+          </div>
+        </div>
+        
+        <!-- Live Cluster Health Ticker -->
+        <div class="cluster-ticker">
+          <div class="ticker-item" id="ticker-nginx">
+            <span class="ticker-led"></span>
+            <span class="t-name">Nginx (:8000)</span>
+            <span class="t-val" id="tval-nginx">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-gateway">
+            <span class="ticker-led"></span>
+            <span class="t-name">GW-1 (:3004)</span>
+            <span class="t-val" id="tval-gateway">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-gw2">
+            <span class="ticker-led"></span>
+            <span class="t-name">GW-2 (:3005)</span>
+            <span class="t-val" id="tval-gw2">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-gw3">
+            <span class="ticker-led"></span>
+            <span class="t-name">GW-3 (:3006)</span>
+            <span class="t-val" id="tval-gw3">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-auth">
+            <span class="ticker-led"></span>
+            <span class="t-name">Auth (:3001)</span>
+            <span class="t-val" id="tval-auth">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-product">
+            <span class="ticker-led"></span>
+            <span class="t-name">Product (:3002)</span>
+            <span class="t-val" id="tval-product">--</span>
+          </div>
+          <div class="ticker-divider">/</div>
+          <div class="ticker-item" id="ticker-order">
+            <span class="ticker-led"></span>
+            <span class="t-name">Order (:3003)</span>
+            <span class="t-val" id="tval-order">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <button id="btn-ping-cluster" class="btn btn-outline btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          Ping Cluster
+        </button>
+      </div>
+    </header>
+
+    <!-- Interactive Topology Canvas -->
+    <section class="topology-section">
+      <div class="topology-header">
+        <div class="topology-title-area">
+          <span class="pill-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Active System Architecture
+          </span>
+          <h2>Client ➔ Nginx Load Balancer (:8000) ➔ 3x Gateways (Each with 3 Services)</h2>
+        </div>
+        <div class="topology-controls">
+          <span class="legend-badge badge-client">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            Client (:5173)
+          </span>
+          <span class="legend-badge badge-lb">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"></path><path d="m15 9 6-6"></path></svg>
+            Nginx LB (:8000)
+          </span>
+          <span class="legend-badge badge-gw">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            3x Gateways (:3004-:3006)
+          </span>
+          <span class="legend-badge badge-svc">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            3 Services Per Gateway (:3001-:3003)
+          </span>
+        </div>
+      </div>
+
+      <div class="topology-stage topology-stage-v2">
+        <!-- SVG Connecting Bus for Animated Packets (Dynamic, Perfectly Aligned) -->
+        <svg class="circuit-canvas" id="circuit-canvas" preserveAspectRatio="none">
+          <defs>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <linearGradient id="grad-client-lb" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#f472b6" stop-opacity="0.6"/>
+            </linearGradient>
+            <linearGradient id="grad-lb-gw1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f472b6" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#60a5fa" stop-opacity="0.6"/>
+            </linearGradient>
+            <linearGradient id="grad-lb-gw2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f472b6" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#c084fc" stop-opacity="0.6"/>
+            </linearGradient>
+            <linearGradient id="grad-lb-gw3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f472b6" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.6"/>
+            </linearGradient>
+          </defs>
+          <g id="svg-paths-layer"></g>
+          <g id="svg-packets-layer"></g>
+        </svg>
+
+        <!-- HTML Layer over SVG -->
+        <div class="topology-grid-v2">
+          <!-- Col 1: Client -->
+          <div class="topo-cell cell-client">
+            <div class="topo-node client-node" id="node-client" onclick="showNodeDetails('client')">
+              <div class="node-icon icon-client">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
+              <div class="node-body">
+                <span class="node-badge">CLIENT</span>
+                <h4>Web Browser</h4>
+                <p class="node-mono">:5173</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Col 2: Load Balancer -->
+          <div class="topo-cell cell-lb">
+            <div class="topo-node lb-node" id="node-nginx" onclick="showNodeDetails('nginx')">
+              <div class="node-icon icon-lb">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"></path><path d="m15 9 6-6"></path></svg>
+              </div>
+              <div class="node-body">
+                <div class="node-title-row">
+                  <span class="node-badge badge-lb">LOAD BALANCER</span>
+                  <span class="live-pill" id="status-nginx"><span class="live-led led-green"></span><span class="live-txt">15ms</span></span>
+                </div>
+                <h4>Nginx (L7 Proxy)</h4>
+                <p class="node-mono">:8000</p>
+                <div class="proxy-rules-hint">Round-Robin across 3 Gateways</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Col 3: Gateway Rows (Each with its 3 Services) -->
+          <div class="topo-cell cell-gateways">
+            
+            <!-- Gateway 1 Row -->
+            <div class="gateway-row" id="row-gw1">
+              <div class="topo-node gateway-node-v2 node-gw1" id="node-gw1" onclick="showNodeDetails('gw1')">
+                <div class="node-icon icon-gw1">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                </div>
+                <div class="node-body">
+                  <div class="node-title-row">
+                    <span class="node-badge badge-gw1">GATEWAY 1</span>
+                    <span class="live-pill" id="status-gateway"><span class="live-led led-green"></span><span class="live-txt">14ms</span></span>
+                  </div>
+                  <h4>gateway-1</h4>
+                  <p class="node-mono">:3004 / :3000</p>
+                </div>
+              </div>
+
+              <!-- Internal Proxy Bus Conduit -->
+              <div class="gw-conduit-bridge">
+                <div class="bridge-tag">INTERNAL BUS</div>
+                <div class="bridge-arrow">➔</div>
+              </div>
+
+              <!-- Gateway 1's 3 Services -->
+              <div class="gw-attached-services">
+                <div class="svc-micro-card card-auth" id="gw1-svc-auth" onclick="showNodeDetails('auth')">
+                  <div class="smc-icon icon-auth"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">AUTH</span><span class="smc-port">:3001</span></div>
+                  <span class="smc-chip" id="gw1-chip-auth">UP</span>
+                </div>
+                <div class="svc-micro-card card-prod" id="gw1-svc-product" onclick="showNodeDetails('product')">
+                  <div class="smc-icon icon-prod"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">PRODUCT</span><span class="smc-port">:3002</span></div>
+                  <span class="smc-chip" id="gw1-chip-product">UP</span>
+                </div>
+                <div class="svc-micro-card card-order" id="gw1-svc-order" onclick="showNodeDetails('order')">
+                  <div class="smc-icon icon-order"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">ORDER</span><span class="smc-port">:3003</span></div>
+                  <span class="smc-chip" id="gw1-chip-order">UP</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gateway 2 Row -->
+            <div class="gateway-row" id="row-gw2">
+              <div class="topo-node gateway-node-v2 node-gw2" id="node-gw2" onclick="showNodeDetails('gw2')">
+                <div class="node-icon icon-gw2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                </div>
+                <div class="node-body">
+                  <div class="node-title-row">
+                    <span class="node-badge badge-gw2">GATEWAY 2</span>
+                    <span class="live-pill" id="status-gw2"><span class="live-led led-green"></span><span class="live-txt">14ms</span></span>
+                  </div>
+                  <h4>gateway-2</h4>
+                  <p class="node-mono">:3005</p>
+                </div>
+              </div>
+
+              <!-- Internal Proxy Bus Conduit -->
+              <div class="gw-conduit-bridge">
+                <div class="bridge-tag">INTERNAL BUS</div>
+                <div class="bridge-arrow">➔</div>
+              </div>
+
+              <!-- Gateway 2's 3 Services -->
+              <div class="gw-attached-services">
+                <div class="svc-micro-card card-auth" id="gw2-svc-auth" onclick="showNodeDetails('auth')">
+                  <div class="smc-icon icon-auth"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">AUTH</span><span class="smc-port">:3001</span></div>
+                  <span class="smc-chip" id="gw2-chip-auth">UP</span>
+                </div>
+                <div class="svc-micro-card card-prod" id="gw2-svc-product" onclick="showNodeDetails('product')">
+                  <div class="smc-icon icon-prod"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">PRODUCT</span><span class="smc-port">:3002</span></div>
+                  <span class="smc-chip" id="gw2-chip-product">UP</span>
+                </div>
+                <div class="svc-micro-card card-order" id="gw2-svc-order" onclick="showNodeDetails('order')">
+                  <div class="smc-icon icon-order"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">ORDER</span><span class="smc-port">:3003</span></div>
+                  <span class="smc-chip" id="gw2-chip-order">UP</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gateway 3 Row -->
+            <div class="gateway-row" id="row-gw3">
+              <div class="topo-node gateway-node-v2 node-gw3" id="node-gw3" onclick="showNodeDetails('gw3')">
+                <div class="node-icon icon-gw3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                </div>
+                <div class="node-body">
+                  <div class="node-title-row">
+                    <span class="node-badge badge-gw3">GATEWAY 3</span>
+                    <span class="live-pill" id="status-gw3"><span class="live-led led-green"></span><span class="live-txt">14ms</span></span>
+                  </div>
+                  <h4>gateway-3</h4>
+                  <p class="node-mono">:3006</p>
+                </div>
+              </div>
+
+              <!-- Internal Proxy Bus Conduit -->
+              <div class="gw-conduit-bridge">
+                <div class="bridge-tag">INTERNAL BUS</div>
+                <div class="bridge-arrow">➔</div>
+              </div>
+
+              <!-- Gateway 3's 3 Services -->
+              <div class="gw-attached-services">
+                <div class="svc-micro-card card-auth" id="gw3-svc-auth" onclick="showNodeDetails('auth')">
+                  <div class="smc-icon icon-auth"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">AUTH</span><span class="smc-port">:3001</span></div>
+                  <span class="smc-chip" id="gw3-chip-auth">UP</span>
+                </div>
+                <div class="svc-micro-card card-prod" id="gw3-svc-product" onclick="showNodeDetails('product')">
+                  <div class="smc-icon icon-prod"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">PRODUCT</span><span class="smc-port">:3002</span></div>
+                  <span class="smc-chip" id="gw3-chip-product">UP</span>
+                </div>
+                <div class="svc-micro-card card-order" id="gw3-svc-order" onclick="showNodeDetails('order')">
+                  <div class="smc-icon icon-order"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+                  <div class="smc-body"><span class="smc-title">ORDER</span><span class="smc-port">:3003</span></div>
+                  <span class="smc-chip" id="gw3-chip-order">UP</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <div class="tab-nav-wrapper">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-client">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </span>
+          <span>API & Gateway Explorer</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-lb-tester">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"></path><path d="m15 9 6-6"></path>
+            </svg>
+          </span>
+          <span>Nginx Load Balancer Tester</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-compare">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line>
+            </svg>
+          </span>
+          <span>Gateway vs Direct</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-scenarios">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </span>
+          <span>System Design Scenarios</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-db-scaling">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </span>
+          <span>DB Scaling & Queues (Mongo, Postgres, Redis, RabbitMQ)</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-caching">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          </span>
+          <span>Distributed Caching (Redis)</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-replication">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+          </span>
+          <span>Data Replication (Leader/Follower)</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-sharding">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </span>
+          <span>Database Sharding</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-logs">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </span>
+          <span>Traffic Inspector</span>
+          <span class="tab-count" id="log-counter">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-benchmark">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </span>
+          <span>Stress & Latency Benchmark</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-learn">
+          <span class="tab-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </span>
+          <span>Architecture Knowledge Base</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: API Explorer & Request Composer -->
+    <div class="tab-content active" id="tab-client">
+      <div class="client-grid">
+        
+        <!-- Left: Request Builder -->
+        <div class="card request-builder-card">
+          <div class="card-title-row">
+            <h3>Request Composer</h3>
+            <!-- Preset Quick Selection -->
+            <div class="preset-dropdown-wrap">
+              <select id="preset-selector" class="select-preset">
+                <option value="" disabled selected>Load System Design Preset...</option>
+                <optgroup label="Through Nginx Load Balancer (:8000) ➔ 3 Gateways">
+                  <option value="lb-auth">GET Nginx ➔ Gateway ➔ Auth (/auth/health)</option>
+                  <option value="lb-prod">GET Nginx ➔ Gateway ➔ Product (/products/health)</option>
+                  <option value="lb-order">GET Nginx ➔ Gateway ➔ Order (/orders/health)</option>
+                  <option value="lb-root">GET Nginx LB Root (http://localhost:8000/)</option>
+                </optgroup>
+                <optgroup label="Direct Through Gateway 1 (:3004 / :3000)">
+                  <option value="auth-health">GET Gateway ➔ Auth Service (/auth/health)</option>
+                  <option value="prod-health">GET Gateway ➔ Product Service (/products/health)</option>
+                  <option value="order-health">GET Gateway ➔ Order Service (/orders/health)</option>
+                  <option value="gw-root">GET Gateway Root & Service Registry (/)</option>
+                  <option value="gw-health">GET Gateway Health (/health)</option>
+                  <option value="gw-404">GET Invalid Route (Gateway 404 Fallback)</option>
+                </optgroup>
+                <optgroup label="Direct Microservices (Bypass Gateway)">
+                  <option value="direct-auth">GET Direct Auth Microservice (:3001/health)</option>
+                  <option value="direct-prod">GET Direct Product Microservice (:3002/health)</option>
+                  <option value="direct-order">GET Direct Order Microservice (:3003/health)</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <!-- URL Bar -->
+          <div class="url-bar-container">
+            <select id="req-method" class="select-method">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+            <input type="text" id="req-url" class="input-url" value="http://localhost:8000/auth/health" placeholder="http://localhost:8000/auth/health">
+            <button id="btn-send-req" class="btn btn-primary btn-send">
+              <span class="btn-text">Execute</span>
+              <span class="spinner" id="btn-spinner"></span>
+            </button>
+          </div>
+
+          <!-- Request Config Sub-Tabs -->
+          <div class="subtabs-bar">
+            <button class="subtab-btn active" data-subtab="sub-headers">Headers</button>
+            <button class="subtab-btn" data-subtab="sub-params">Params</button>
+            <button class="subtab-btn" data-subtab="sub-body">Body (JSON)</button>
+          </div>
+
+          <div class="subtab-content active" id="sub-headers">
+            <div class="kv-table">
+              <div class="kv-header"><span>Header Key</span><span>Header Value</span></div>
+              <div class="kv-row">
+                <input type="text" class="kv-key" value="Accept" readonly>
+                <input type="text" class="kv-val" value="application/json" readonly>
+              </div>
+              <div class="kv-row">
+                <input type="text" class="kv-key" id="custom-h-key" placeholder="Key (e.g. Authorization)">
+                <input type="text" class="kv-val" id="custom-h-val" placeholder="Value (e.g. Bearer token_xyz)">
+              </div>
+            </div>
+          </div>
+
+          <div class="subtab-content" id="sub-params">
+            <div class="kv-table">
+              <div class="kv-header"><span>Query Param</span><span>Value</span></div>
+              <div class="kv-row">
+                <input type="text" class="kv-key" id="param-key-1" placeholder="key (e.g. limit)">
+                <input type="text" class="kv-val" id="param-val-1" placeholder="value (e.g. 10)">
+              </div>
+            </div>
+          </div>
+
+          <div class="subtab-content" id="sub-body">
+            <div class="body-editor-toolbar">
+              <span class="editor-label">Payload (application/json)</span>
+              <button class="btn-text-sm" onclick="formatBodyJson()">Format JSON</button>
+              <button class="btn-text-sm" onclick="insertMockBody()">Insert Sample</button>
+            </div>
+            <textarea id="req-body" class="code-editor" placeholder="{\n  &quot;customer&quot;: &quot;Alice Smith&quot;,\n  &quot;items&quot;: [&quot;MacBook Pro M3 Max&quot;]\n}"></textarea>
+          </div>
+
+          <!-- Gateway Path Analysis Box -->
+          <div class="gateway-explain-box" id="proxy-explanation">
+            <div class="explain-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </div>
+            <div class="explain-text">
+              <strong>Routing Path Analysis:</strong>
+              <p id="explain-details">Request will hit <strong>Nginx Load Balancer (:8000)</strong>, which round-robins across the 3 Gateway replicas (:3004-:3006), strips the prefix, and routes to the target microservice.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Response Inspector -->
+        <div class="card response-card">
+          <div class="response-top">
+            <div class="response-status-group">
+              <h3>Response Inspector</h3>
+              <span class="status-pill idle" id="resp-badge">Awaiting Call</span>
+            </div>
+            <div class="response-metrics">
+              <div class="metric"><span class="m-lbl">Latency:</span> <span class="m-val" id="resp-time">-- ms</span></div>
+              <div class="metric"><span class="m-lbl">Size:</span> <span class="m-val" id="resp-size">-- KB</span></div>
+            </div>
+          </div>
+
+          <!-- Gateway & Microservice Dispatch Telemetry Strip -->
+          <div class="gateway-dispatch-banner" id="gateway-dispatch-banner">
+            <div class="gdb-top-row">
+              <div class="gdb-left">
+                <div class="gdb-radar-dot"></div>
+                <div>
+                  <span class="gdb-label">DISPATCH ROUTING RESOLUTION</span>
+                  <h4 id="gdb-instance-name">Served by: Standalone / Awaiting Call</h4>
+                </div>
+              </div>
+              <div class="gdb-right">
+                <span class="gdb-tag tag-lb" id="gdb-lb">LB: Direct</span>
+                <span class="gdb-tag tag-port" id="gdb-port">Port: --</span>
+                <span class="gdb-tag tag-target" id="gdb-target">Target: --</span>
+                <span class="gdb-tag tag-service" id="gdb-service">Service: --</span>
+              </div>
+            </div>
+            <div class="gdb-hop-trail" id="gdb-hop-trail">
+              <span class="hop hop-client">Client (:5173)</span>
+              <span class="hop-arrow">➔</span>
+              <span class="hop hop-lb" id="hop-lb-val">Nginx LB (:8000)</span>
+              <span class="hop-arrow">➔</span>
+              <span class="hop hop-gw" id="hop-gw-val">Gateway (?)</span>
+              <span class="hop-arrow">➔</span>
+              <span class="hop hop-svc" id="hop-svc-val">Microservice (?)</span>
+            </div>
+          </div>
+
+          <!-- Response Tabs -->
+          <div class="subtabs-bar">
+            <button class="subtab-btn active" data-subtab="resp-sub-json">Formatted JSON</button>
+            <button class="subtab-btn" data-subtab="resp-sub-raw">Raw Body</button>
+            <button class="subtab-btn" data-subtab="resp-sub-headers">Response Headers</button>
+            <button class="subtab-btn" data-subtab="resp-sub-timing">Roundtrip Breakdown</button>
+          </div>
+
+          <!-- Formatted JSON Tab -->
+          <div class="subtab-content active" id="resp-sub-json">
+            <div class="response-viewer-header">
+              <span class="badge-tag">application/json</span>
+              <button class="btn-copy" id="btn-copy-json">Copy JSON</button>
+            </div>
+            <pre class="code-viewer" id="resp-formatted">// Click "Execute" or select a preset to view proxy response...</pre>
+          </div>
+
+          <!-- Raw Body Tab -->
+          <div class="subtab-content" id="resp-sub-raw">
+            <textarea class="raw-viewer" id="resp-raw" readonly placeholder="Raw response text..."></textarea>
+          </div>
+
+          <!-- Response Headers Tab -->
+          <div class="subtab-content" id="resp-sub-headers">
+            <div class="headers-list" id="resp-headers-list">
+              <p class="placeholder-text">No response received yet.</p>
+            </div>
+          </div>
+
+          <!-- Timing Breakdown Tab -->
+          <div class="subtab-content" id="resp-sub-timing">
+            <div class="timing-waterfall">
+              <div class="waterfall-bar-group">
+                <div class="wf-label"><span>Client Request Dispatch</span><span id="wf-t1">-- ms</span></div>
+                <div class="wf-bar"><div class="wf-fill fill-blue" id="wf-bar-1" style="width: 20%;"></div></div>
+              </div>
+              <div class="waterfall-bar-group">
+                <div class="wf-label"><span>Gateway Proxy Forward & Route</span><span id="wf-t2">-- ms</span></div>
+                <div class="wf-bar"><div class="wf-fill fill-purple" id="wf-bar-2" style="width: 60%;"></div></div>
+              </div>
+              <div class="waterfall-bar-group">
+                <div class="wf-label"><span>Downstream Microservice Response</span><span id="wf-t3">-- ms</span></div>
+                <div class="wf-bar"><div class="wf-fill fill-cyan" id="wf-bar-3" style="width: 20%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Nginx Load Balancer Tester -->
+    <div class="tab-content" id="tab-lb-tester">
+      <div class="card lb-tester-card">
+        <div class="card-title-row">
+          <div>
+            <h3>Nginx Round-Robin Load Balancer Tester (Port :8000)</h3>
+            <p class="card-sub">Watch Nginx distribute traffic evenly across the 3 gateway replicas (`gateway-1`, `gateway-2`, `gateway-3`) and forward each call to your chosen microservice.</p>
+          </div>
+          <div class="lb-actions">
+            <div class="lb-target-select-wrap">
+              <label for="lb-burst-target">Target Service:</label>
+              <select id="lb-burst-target" class="select-preset select-sm">
+                <option value="http://localhost:8000/auth/health">Auth Service (/auth/health)</option>
+                <option value="http://localhost:8000/products/health">Product Service (/products/health)</option>
+                <option value="http://localhost:8000/orders/health">Order Service (/orders/health)</option>
+                <option value="http://localhost:8000/">Gateway Registry Root (/)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-burst-lb">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Send 12 Requests (Burst Test)
+            </button>
+            <button class="btn btn-outline" id="btn-reset-lb-stats">Reset Counters</button>
+          </div>
+        </div>
+
+        <!-- Live Replica Hit Distribution Cards -->
+        <div class="replica-counter-grid">
+          <div class="replica-card" id="rep-card-1">
+            <div class="rep-header">
+              <span class="rep-tag rep-tag-gw1">REPLICA 1</span>
+              <span class="rep-port">:3004 / internal :3000</span>
+            </div>
+            <div class="rep-body">
+              <h4 class="rep-name">gateway-1</h4>
+              <div class="rep-count-val" id="rep-hits-1">0 hits</div>
+              <div class="rep-bar-wrap"><div class="rep-bar-fill bar-fill-gw1" id="rep-bar-1" style="width: 0%;"></div></div>
+              <span class="rep-pct" id="rep-pct-1">0% of traffic</span>
+            </div>
+          </div>
+
+          <div class="replica-card" id="rep-card-2">
+            <div class="rep-header">
+              <span class="rep-tag rep-tag-gw2">REPLICA 2</span>
+              <span class="rep-port">:3005 / internal :3000</span>
+            </div>
+            <div class="rep-body">
+              <h4 class="rep-name">gateway-2</h4>
+              <div class="rep-count-val" id="rep-hits-2">0 hits</div>
+              <div class="rep-bar-wrap"><div class="rep-bar-fill bar-fill-gw2" id="rep-bar-2" style="width: 0%;"></div></div>
+              <span class="rep-pct" id="rep-pct-2">0% of traffic</span>
+            </div>
+          </div>
+
+          <div class="replica-card" id="rep-card-3">
+            <div class="rep-header">
+              <span class="rep-tag rep-tag-gw3">REPLICA 3</span>
+              <span class="rep-port">:3006 / internal :3000</span>
+            </div>
+            <div class="rep-body">
+              <h4 class="rep-name">gateway-3</h4>
+              <div class="rep-count-val" id="rep-hits-3">0 hits</div>
+              <div class="rep-bar-wrap"><div class="rep-bar-fill bar-fill-gw3" id="rep-bar-3" style="width: 0%;"></div></div>
+              <span class="rep-pct" id="rep-pct-3">0% of traffic</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Burst Test Execution Stream -->
+        <div class="burst-stream-section">
+          <h4>Round-Robin Real-Time Execution Sequence</h4>
+          <div class="burst-sequence" id="burst-sequence">
+            <span class="stream-placeholder">Click "Send 12 Requests (Burst Test)" above to watch Nginx alternate between replicas in real time.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Gateway vs Direct Comparison -->
+    <div class="tab-content" id="tab-compare">
+      <div class="card compare-card">
+        <div class="card-title-row">
+          <div>
+            <h3>Architecture Benchmark: API Gateway vs Direct Microservice Call</h3>
+            <p class="card-sub">Run a side-by-side comparison between calling a microservice directly vs through the API Gateway.</p>
+          </div>
+          <div class="compare-actions-group">
+            <select id="comp-service-selector" class="select-preset select-sm">
+              <option value="auth">Auth Service (:3001)</option>
+              <option value="product">Product Service (:3002)</option>
+              <option value="order">Order Service (:3003)</option>
+            </select>
+            <button class="btn btn-primary" id="btn-run-comparison">Run Side-by-Side Test</button>
+          </div>
+        </div>
+
+        <div class="comparison-grid">
+          <!-- Col 1: Direct Call -->
+          <div class="compare-col">
+            <div class="comp-header direct-header">
+              <span class="comp-badge">DIRECT CALL (Anti-Pattern)</span>
+              <h4 id="comp-direct-title">Client ➔ Microservice Directly</h4>
+              <code id="comp-direct-url">http://localhost:3001/health</code>
+            </div>
+            <div class="comp-stats" id="comp-direct-stats">
+              <div class="comp-stat-row"><span>Status:</span> <strong id="cd-status">Ready</strong></div>
+              <div class="comp-stat-row"><span>Roundtrip Latency:</span> <strong id="cd-latency">-- ms</strong></div>
+              <div class="comp-stat-row"><span>CORS Boundary:</span> <span class="tag-warning">Individual Service Origin</span></div>
+              <div class="comp-stat-row"><span>Port Exposure:</span> <span class="tag-danger">Internal Port Exposed</span></div>
+            </div>
+            <div class="comp-result-box">
+              <h5>Direct Response Payload:</h5>
+              <pre class="comp-pre" id="comp-direct-pre">// Click "Run Side-by-Side Test" to test direct call...</pre>
+            </div>
+          </div>
+
+          <!-- Col 2: Through Gateway -->
+          <div class="compare-col">
+            <div class="comp-header gw-header">
+              <span class="comp-badge badge-gw">API GATEWAY PATTERN (Best Practice)</span>
+              <h4 id="comp-gw-title">Client ➔ Gateway ➔ Microservice</h4>
+              <code id="comp-gw-url">http://localhost:8000/auth/health</code>
+            </div>
+            <div class="comp-stats" id="comp-gw-stats">
+              <div class="comp-stat-row"><span>Status:</span> <strong id="cg-status">Ready</strong></div>
+              <div class="comp-stat-row"><span>Roundtrip Latency:</span> <strong id="cg-latency">-- ms</strong></div>
+              <div class="comp-stat-row"><span>CORS Boundary:</span> <span class="tag-success">Centralized (1 Origin)</span></div>
+              <div class="comp-stat-row"><span>Port Exposure:</span> <span class="tag-success">Internal Port Hidden</span></div>
+            </div>
+            <div class="comp-result-box">
+              <h5>Gateway Response Payload (Includes _routing):</h5>
+              <pre class="comp-pre" id="comp-gw-pre">// Click "Run Side-by-Side Test" to test gateway proxying...</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Traffic Log -->
+    <div class="tab-content" id="tab-logs">
+      <div class="card logs-card">
+        <div class="logs-toolbar">
+          <div class="logs-filter-group">
+            <span class="filter-label">Filter Traffic:</span>
+            <button class="btn-filter active" data-filter="ALL">All Traffic</button>
+            <button class="btn-filter" data-filter="nginx">Nginx LB (:8000)</button>
+            <button class="btn-filter" data-filter="gateway-1">Gateway 1 (:3004)</button>
+            <button class="btn-filter" data-filter="gateway-2">Gateway 2 (:3005)</button>
+            <button class="btn-filter" data-filter="gateway-3">Gateway 3 (:3006)</button>
+            <button class="btn-filter" data-filter="auth">Auth (:3001)</button>
+            <button class="btn-filter" data-filter="product">Product (:3002)</button>
+            <button class="btn-filter" data-filter="order">Order (:3003)</button>
+          </div>
+          <div class="logs-action-group">
+            <button class="btn btn-sm btn-outline" id="btn-clear-logs">Clear History</button>
+            <button class="btn btn-sm btn-outline" id="btn-export-logs">Export JSON</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Method</th>
+                <th>Target URL / Path</th>
+                <th>Load Balancer</th>
+                <th>Gateway Replica</th>
+                <th>Microservice</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody">
+              <tr class="empty-row">
+                <td colspan="9">No gateway traffic recorded yet. Send requests from the API Client tab!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Benchmark Tab -->
+    <div class="tab-content" id="tab-benchmark">
+      <div class="benchmark-grid">
+        <div class="card bench-controls-card">
+          <h3>Stress & Latency Benchmark Engine</h3>
+          <p class="bench-sub">Measure request throughput and latency distributions across Nginx Load Balancer, Gateway replicas, or direct microservices.</p>
+
+          <div class="bench-form">
+            <div class="form-row">
+              <label>Target Endpoint:</label>
+              <select id="bench-target" class="bench-select">
+                <option value="http://localhost:8000/auth/health">Nginx LB ➔ Gateway ➔ Auth Service (:8000/auth/health)</option>
+                <option value="http://localhost:8000/products/health">Nginx LB ➔ Gateway ➔ Product Service (:8000/products/health)</option>
+                <option value="http://localhost:8000/orders/health">Nginx LB ➔ Gateway ➔ Order Service (:8000/orders/health)</option>
+                <option value="http://localhost:8000/">Nginx LB Root (:8000/)</option>
+                <option value="http://localhost:3004/auth/health">Gateway 1 Direct (:3004/auth/health)</option>
+                <option value="http://localhost:3001/health">Auth Service Direct (Bypass Gateway :3001/health)</option>
+              </select>
+            </div>
+
+            <div class="form-row-dual">
+              <div class="form-col">
+                <label>Total Requests:</label>
+                <input type="number" id="bench-count" min="5" max="100" value="20" class="bench-input">
+              </div>
+              <div class="form-col">
+                <label>Concurrency (Workers):</label>
+                <input type="number" id="bench-concurrency" min="1" max="10" value="3" class="bench-input">
+              </div>
+            </div>
+
+            <button id="btn-run-bench" class="btn btn-primary btn-block">
+              <span id="bench-btn-text">Start Benchmark Run</span>
+              <span class="spinner" id="bench-spinner"></span>
+            </button>
+          </div>
+
+          <div class="bench-progress-wrap" id="bench-progress-wrap" style="display: none;">
+            <div class="progress-bar"><div class="progress-fill" id="bench-progress-fill"></div></div>
+            <span class="progress-text" id="bench-progress-text">Executing 0 / 20...</span>
+          </div>
+        </div>
+
+        <div class="card bench-results-card">
+          <div class="card-title-row">
+            <h3>Performance Histogram & Statistics</h3>
+            <span class="badge-tag" id="bench-status-tag">Ready</span>
+          </div>
+
+          <div class="bench-stats-grid">
+            <div class="b-stat-box">
+              <span class="b-lbl">Avg Latency</span>
+              <span class="b-val highlight-blue" id="b-avg">-- ms</span>
+            </div>
+            <div class="b-stat-box">
+              <span class="b-lbl">Fastest (Min)</span>
+              <span class="b-val highlight-green" id="b-min">-- ms</span>
+            </div>
+            <div class="b-stat-box">
+              <span class="b-lbl">P95 Latency</span>
+              <span class="b-val highlight-purple" id="b-p95">-- ms</span>
+            </div>
+            <div class="b-stat-box">
+              <span class="b-lbl">Success Rate</span>
+              <span class="b-val highlight-cyan" id="b-success">-- %</span>
+            </div>
+          </div>
+
+          <!-- Visual Latency Spectrum -->
+          <div class="spectrum-container">
+            <h4>Request Latency Distribution (Histogram)</h4>
+            <div class="spectrum-bars" id="spectrum-bars">
+              <div class="spectrum-placeholder">Run a benchmark to generate the latency histogram.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Distributed Caching (Redis) -->
+    <div class="tab-content" id="tab-caching">
+      <div class="sysdesign-lab-grid">
+        
+        <!-- Top: Interactive Cache Architecture Flow -->
+        <div class="card lab-arch-card">
+          <div class="card-title-row">
+            <div>
+              <span class="pill-badge pill-cyan">System Design Pattern</span>
+              <h3>Distributed Caching (Cache-Aside / Lazy Loading with Redis)</h3>
+            </div>
+            <div class="cache-hud-pills">
+              <span class="hud-pill pill-hit"><span class="hud-dot dot-green"></span> Hits: <strong id="cache-hit-count">0</strong></span>
+              <span class="hud-pill pill-miss"><span class="hud-dot dot-orange"></span> Misses: <strong id="cache-miss-count">0</strong></span>
+              <span class="hud-pill pill-ratio"><span class="hud-dot dot-blue"></span> Hit Ratio: <strong id="cache-hit-ratio">0.0%</strong></span>
+            </div>
+          </div>
+
+          <!-- Visual Cache Pipeline -->
+          <div class="cache-pipeline-stage">
+            <div class="pipe-node pipe-client" id="cnode-client">
+              <div class="pnode-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
+              <div class="pnode-body">
+                <span class="pnode-tag">CLIENT</span>
+                <strong>Web Browser</strong>
+              </div>
+            </div>
+
+            <div class="pipe-arrow-conduit" id="parrow-client-gw">
+              <span class="p-beam"></span>
+              <span class="parrow-label">HTTP</span>
+            </div>
+
+            <div class="pipe-node pipe-gw" id="cnode-gw">
+              <div class="pnode-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              </div>
+              <div class="pnode-body">
+                <span class="pnode-tag">GATEWAY</span>
+                <strong>API Gateway</strong>
+              </div>
+            </div>
+
+            <div class="pipe-fork-conduit">
+              <div class="fork-line fork-cache" id="parrow-gw-cache">
+                <span class="p-beam"></span>
+                <span class="parrow-label label-cache">1. Cache Check</span>
+              </div>
+              <div class="fork-line fork-db" id="parrow-gw-db">
+                <span class="p-beam"></span>
+                <span class="parrow-label label-db">2. DB Fallback</span>
+              </div>
+            </div>
+
+            <div class="pipe-backends-col">
+              <!-- Redis Cache Node -->
+              <div class="pipe-node pipe-redis" id="cnode-redis">
+                <div class="pnode-icon icon-redis">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                </div>
+                <div class="pnode-body">
+                  <div class="pnode-top">
+                    <span class="pnode-tag tag-redis">IN-MEMORY CACHE</span>
+                    <span class="pnode-status-chip chip-ready" id="cstatus-redis">ONLINE</span>
+                  </div>
+                  <strong>Redis (RAM)</strong>
+                  <span class="pnode-metric" id="cmetric-redis">Latency: ~1.2ms</span>
+                </div>
+              </div>
+
+              <!-- Postgres DB Node -->
+              <div class="pipe-node pipe-db" id="cnode-db">
+                <div class="pnode-icon icon-db">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                </div>
+                <div class="pnode-body">
+                  <div class="pnode-top">
+                    <span class="pnode-tag tag-db">PERSISTENT STORAGE</span>
+                    <span class="pnode-status-chip chip-ready">ONLINE</span>
+                  </div>
+                  <strong>PostgreSQL (Disk)</strong>
+                  <span class="pnode-metric" id="cmetric-db">Latency: ~48.5ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle: Interactive Control & Live Storage Deck -->
+        <div class="sysdesign-two-col">
+          <!-- Left: Cache Operations Simulator -->
+          <div class="card">
+            <h3>Cache Query Simulator</h3>
+            <p class="section-lead">Simulate real-world <strong>Cache-Aside</strong> lookups, cache misses with database fallback, TTL expiration, and cache invalidation.</p>
+            
+            <div class="form-group">
+              <label>Select Cached Entity Key:</label>
+              <select id="cache-key-select" class="select-preset">
+                <option value="product:101">product:101 (iPhone 15 Pro Max - $1,199)</option>
+                <option value="product:102">product:102 (MacBook Pro M3 Max - $3,499)</option>
+                <option value="user:profile:88">user:profile:88 (Alex Rivera - Tier 1 Auth)</option>
+                <option value="order:summary:301">order:summary:301 (Cart Summary 3 Items)</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Key Name:</label>
+                <input type="text" id="cache-custom-key" class="input-url" value="product:101">
+              </div>
+              <div class="form-group" style="width: 140px;">
+                <label>TTL (Seconds):</label>
+                <select id="cache-ttl-select" class="select-method">
+                  <option value="15">15 Seconds</option>
+                  <option value="30" selected>30 Seconds</option>
+                  <option value="60">60 Seconds</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="cache-actions-grid">
+              <button id="btn-cache-read" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                Execute Read (Cache-Aside GET)
+              </button>
+              <button id="btn-cache-write" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Write DB & Invalidate Cache (PUT)
+              </button>
+              <button id="btn-cache-flush" class="btn btn-outline">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Flush Redis (FLUSHALL)
+              </button>
+            </div>
+
+            <!-- Last Query Telemetry Callout -->
+            <div class="cache-telemetry-banner" id="cache-telemetry-banner">
+              <div class="ctb-status" id="ctb-badge">READY</div>
+              <div class="ctb-details" id="ctb-details">Click "Execute Read" to trigger a Cache-Aside query.</div>
+            </div>
+          </div>
+
+          <!-- Right: Live Redis In-Memory Key Store -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>Live Redis In-Memory Key Store</h3>
+              <span class="badge-accent" id="redis-keys-count">0 Keys Cached</span>
+            </div>
+            <p class="section-lead">Real-time RAM keys with automated TTL expiration countdown.</p>
+
+            <div class="redis-memory-grid" id="redis-memory-grid">
+              <!-- Keys dynamically rendered here -->
+              <div class="empty-keys-prompt">Cache is empty. Execute a read query to populate Redis.</div>
+            </div>
+
+            <!-- Speedup Gauge -->
+            <div class="latency-compare-card">
+              <h4>Latency Impact: Memory vs Disk</h4>
+              <div class="speed-bars">
+                <div class="speed-row">
+                  <span class="speed-label">Redis Cache Hit (RAM)</span>
+                  <div class="speed-track"><div class="speed-fill fill-fast" style="width: 3%;"></div></div>
+                  <span class="speed-num text-green">1.2 ms</span>
+                </div>
+                <div class="speed-row">
+                  <span class="speed-label">PostgreSQL Query (Disk)</span>
+                  <div class="speed-track"><div class="speed-fill fill-slow" style="width: 100%;"></div></div>
+                  <span class="speed-num text-orange">48.5 ms (~40x slower)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 5: Data Replication (Leader-Follower / WAL) -->
+    <div class="tab-content" id="tab-replication">
+      <div class="sysdesign-lab-grid">
+        
+        <!-- Top: Cluster Topology & Live Streaming WAL -->
+        <div class="card lab-arch-card">
+          <div class="card-title-row">
+            <div>
+              <span class="pill-badge pill-purple">System Design Pattern</span>
+              <h3>Primary-Replica Data Replication (Write-Ahead Log Streaming)</h3>
+            </div>
+            <div class="repl-controls-bar">
+              <span class="repl-mode-label">Replication Mode:</span>
+              <button class="btn btn-sm btn-outline active" id="btn-mode-async">Asynchronous (~10ms lag)</button>
+              <button class="btn btn-sm btn-outline" id="btn-mode-sync">Synchronous (0ms lag, ACK wait)</button>
+            </div>
+          </div>
+
+          <!-- Replication Cluster Diagram -->
+          <div class="repl-stage">
+            
+            <!-- Left: Primary Leader -->
+            <div class="repl-cluster-col">
+              <div class="repl-node node-primary" id="rnode-primary">
+                <div class="rnode-header">
+                  <span class="rnode-role role-primary">PRIMARY (LEADER)</span>
+                  <span class="rnode-status" id="rstatus-primary">READ / WRITE</span>
+                </div>
+                <div class="rnode-body">
+                  <div class="rnode-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  </div>
+                  <div class="rnode-meta">
+                    <h4>db-primary-node</h4>
+                    <p class="node-mono">:5432 (Master)</p>
+                  </div>
+                </div>
+                <div class="rnode-footer">
+                  <span class="rf-label">WAL LSN:</span>
+                  <span class="rf-val" id="primary-lsn">0/1A98F20</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Center: WAL Streaming Conduits -->
+            <div class="repl-conduit-col">
+              <div class="wal-pipe-box" id="wal-pipe-1">
+                <div class="wal-stream-beam" id="wal-beam-1"></div>
+                <span class="wal-label">WAL Sync Stream ➔ Replica 1</span>
+              </div>
+              <div class="wal-pipe-box" id="wal-pipe-2">
+                <div class="wal-stream-beam" id="wal-beam-2"></div>
+                <span class="wal-label">WAL Sync Stream ➔ Replica 2</span>
+              </div>
+            </div>
+
+            <!-- Right: Replicas -->
+            <div class="repl-cluster-col">
+              <!-- Replica 1 -->
+              <div class="repl-node node-replica" id="rnode-replica1">
+                <div class="rnode-header">
+                  <span class="rnode-role role-replica">READ REPLICA 1</span>
+                  <span class="rnode-status" id="rstatus-rep1">READ-ONLY</span>
+                </div>
+                <div class="rnode-body">
+                  <div class="rnode-icon-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  </div>
+                  <div class="rnode-meta">
+                    <h4>db-replica-az1</h4>
+                    <p class="node-mono">:5433 (Follower)</p>
+                  </div>
+                </div>
+                <div class="rnode-footer">
+                  <span class="rf-label">Lag:</span>
+                  <span class="rf-val text-green" id="rep1-lag">8ms</span>
+                </div>
+              </div>
+
+              <!-- Replica 2 -->
+              <div class="repl-node node-replica" id="rnode-replica2">
+                <div class="rnode-header">
+                  <span class="rnode-role role-replica">READ REPLICA 2</span>
+                  <span class="rnode-status" id="rstatus-rep2">READ-ONLY</span>
+                </div>
+                <div class="rnode-body">
+                  <div class="rnode-icon-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  </div>
+                  <div class="rnode-meta">
+                    <h4>db-replica-az2</h4>
+                    <p class="node-mono">:5434 (Follower)</p>
+                  </div>
+                </div>
+                <div class="rnode-footer">
+                  <span class="rf-label">Lag:</span>
+                  <span class="rf-val text-green" id="rep2-lag">12ms</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Middle: Interactive Write/Read & Failover Operations -->
+        <div class="sysdesign-two-col">
+          <!-- Left: Query Dispatch & Failover -->
+          <div class="card">
+            <h3>Replication Operations</h3>
+            <p class="section-lead">Dispatch Write operations directly to Primary, scale Reads across Replicas, and simulate High Availability failovers.</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Order Item Name:</label>
+                <input type="text" id="repl-order-item" class="input-url" value="Apple Vision Pro">
+              </div>
+              <div class="form-group" style="width: 120px;">
+                <label>Amount ($):</label>
+                <input type="number" id="repl-order-amount" class="input-url" value="3499">
+              </div>
+            </div>
+
+            <div class="cache-actions-grid">
+              <button id="btn-repl-write" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Execute Write (INSERT INTO orders) ➔ Primary
+              </button>
+              <button id="btn-repl-read" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                Execute Read (SELECT * FROM orders) ➔ Replicas
+              </button>
+              <button id="btn-repl-failover" class="btn btn-outline btn-danger">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Crash Primary (Simulate Outage & Failover)
+              </button>
+              <button id="btn-repl-recover" class="btn btn-outline" style="display: none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Recover Primary Node
+              </button>
+            </div>
+
+            <!-- Replication Banner -->
+            <div class="cache-telemetry-banner" id="repl-telemetry-banner">
+              <div class="ctb-status" id="repl-badge">CLUSTER HEALTHY</div>
+              <div class="ctb-details" id="repl-details">Click "Execute Write" to watch data sync across the replication bus.</div>
+            </div>
+          </div>
+
+          <!-- Right: Synced Data Table & WAL Stream -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>Live Synced Database State</h3>
+              <span class="badge-accent" id="repl-record-count">3 Records</span>
+            </div>
+            
+            <div class="table-wrap">
+              <table class="live-data-table" id="repl-table">
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Item</th>
+                    <th>Amount</th>
+                    <th>Primary</th>
+                    <th>Replica 1</th>
+                    <th>Replica 2</th>
+                  </tr>
+                </thead>
+                <tbody id="repl-tbody">
+                  <tr>
+                    <td><code>#ord-1001</code></td>
+                    <td>MacBook Air M2</td>
+                    <td>$1,099</td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                  </tr>
+                  <tr>
+                    <td><code>#ord-1002</code></td>
+                    <td>Sony WH-1000XM5</td>
+                    <td>$399</td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                  </tr>
+                  <tr>
+                    <td><code>#ord-1003</code></td>
+                    <td>Keychron Q1 Pro</td>
+                    <td>$199</td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                    <td><span class="synced-chip">SYNCED</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- WAL Stream Box -->
+            <div class="wal-stream-log">
+              <div class="wsl-header">WAL (Write-Ahead Log) Stream:</div>
+              <div class="wsl-body" id="wal-stream-body">
+                <code>[LSN 0/1A98E80] COMMIT txn_id=981 inserted order #ord-1001</code>
+                <code>[LSN 0/1A98F00] COMMIT txn_id=982 inserted order #ord-1002</code>
+                <code>[LSN 0/1A98F20] COMMIT txn_id=983 inserted order #ord-1003</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 6: Database Sharding (Horizontal Partitioning) -->
+    <div class="tab-content" id="tab-sharding">
+      <div class="sysdesign-lab-grid">
+        
+        <!-- Top: Interactive Shard Architecture Flow -->
+        <div class="card lab-arch-card">
+          <div class="card-title-row">
+            <div>
+              <span class="pill-badge pill-green">System Design Pattern</span>
+              <h3>Horizontal Database Sharding (Hash-Based Partitioning)</h3>
+            </div>
+            <div class="shard-formula-badge">
+              <span>Partition Routing Key:</span>
+              <code>Shard = CRC32(PartitionKey) % 3</code>
+            </div>
+          </div>
+
+          <!-- Sharding Pipeline Stage -->
+          <div class="shard-pipeline-stage">
+            
+            <!-- Sharding Router -->
+            <div class="shard-router-box" id="snode-router">
+              <div class="srouter-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              </div>
+              <div class="srouter-meta">
+                <span class="pnode-tag tag-router">SHARDING PROXY</span>
+                <h4>Hash Router Hub</h4>
+                <p class="node-mono" id="sharding-calc-preview">hash("user_101") % 3 = Shard 1</p>
+              </div>
+            </div>
+
+            <!-- Shard Distribution Bus -->
+            <div class="shard-bus-wrapper">
+              <div class="shard-bus-beam" id="shard-bus-beam"></div>
+            </div>
+
+            <!-- The 3 Shards -->
+            <div class="shards-row">
+              <!-- Shard 0 -->
+              <div class="shard-card" id="shard-card-0">
+                <div class="shard-header">
+                  <span class="shard-num-badge">SHARD 0</span>
+                  <span class="shard-count-badge" id="shard-0-count">2 Records</span>
+                </div>
+                <h4>db-shard-us-east</h4>
+                <p class="node-mono">Partition Key % 3 == 0</p>
+                <div class="shard-bar-track"><div class="shard-bar-fill bar-fill-gw1" id="shard-0-fill" style="width: 33%;"></div></div>
+                <div class="shard-items-list" id="shard-0-items">
+                  <div class="shard-row-item"><code>user_300</code>: Alice Miller</div>
+                  <div class="shard-row-item"><code>user_603</code>: David Kim</div>
+                </div>
+              </div>
+
+              <!-- Shard 1 -->
+              <div class="shard-card" id="shard-card-1">
+                <div class="shard-header">
+                  <span class="shard-num-badge">SHARD 1</span>
+                  <span class="shard-count-badge" id="shard-1-count">2 Records</span>
+                </div>
+                <h4>db-shard-us-west</h4>
+                <p class="node-mono">Partition Key % 3 == 1</p>
+                <div class="shard-bar-track"><div class="shard-bar-fill bar-fill-gw2" id="shard-1-fill" style="width: 33%;"></div></div>
+                <div class="shard-items-list" id="shard-1-items">
+                  <div class="shard-row-item"><code>user_101</code>: Brian Chen</div>
+                  <div class="shard-row-item"><code>user_404</code>: Emma Watson</div>
+                </div>
+              </div>
+
+              <!-- Shard 2 -->
+              <div class="shard-card" id="shard-card-2">
+                <div class="shard-header">
+                  <span class="shard-num-badge">SHARD 2</span>
+                  <span class="shard-count-badge" id="shard-2-count">2 Records</span>
+                </div>
+                <h4>db-shard-eu-central</h4>
+                <p class="node-mono">Partition Key % 3 == 2</p>
+                <div class="shard-bar-track"><div class="shard-bar-fill bar-fill-gw3" id="shard-2-fill" style="width: 33%;"></div></div>
+                <div class="shard-items-list" id="shard-2-items">
+                  <div class="shard-row-item"><code>user_202</code>: Carlos Ray</div>
+                  <div class="shard-row-item"><code>user_505</code>: Fiona Gallagher</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Middle: Shard Routing & Scatter-Gather Simulator -->
+        <div class="sysdesign-two-col">
+          <!-- Left: Hash Query Router -->
+          <div class="card">
+            <h3>Shard Key Query Dispatcher</h3>
+            <p class="section-lead">Enter a Sharding Key (e.g. User ID) to watch the router calculate the hash and route the packet into its dedicated database instance.</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Sharding Key (Partition Key):</label>
+                <input type="text" id="shard-input-key" class="input-url" value="user_789">
+              </div>
+              <div class="form-group flex-1">
+                <label>User Name:</label>
+                <input type="text" id="shard-input-name" class="input-url" value="Grace Hopper">
+              </div>
+            </div>
+
+            <div class="cache-actions-grid">
+              <button id="btn-shard-route" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                Route & Store (Hash-Based Shard Insert)
+              </button>
+              <button id="btn-shard-scatter" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"></path><path d="m15 9 6-6"></path></svg>
+                Run Scatter-Gather Query (Broadcast Across All Shards)
+              </button>
+            </div>
+
+            <!-- Shard Telemetry Banner -->
+            <div class="cache-telemetry-banner" id="shard-telemetry-banner">
+              <div class="ctb-status" id="shard-badge">ROUTER READY</div>
+              <div class="ctb-details" id="shard-details">Click "Route & Store" to execute hash partitioning.</div>
+            </div>
+          </div>
+
+          <!-- Right: Architecture Deep Dive Card -->
+          <div class="card">
+            <h3>Sharding Principles in System Design</h3>
+            <div class="sharding-explainer">
+              <div class="se-item">
+                <strong>1. Why Sharding?</strong>
+                <p>When a database exceeds single-server CPU, IOPS, or storage capacity, sharding splits data horizontally across independent instances so reads and writes scale linearly.</p>
+              </div>
+              <div class="se-item">
+                <strong>2. Partition Key Selection</strong>
+                <p>A good shard key ensures uniform distribution. Poor shard keys cause "hot spots" where 90% of traffic hammers a single shard node.</p>
+              </div>
+              <div class="se-item">
+                <strong>3. The Scatter-Gather Penalty</strong>
+                <p>Queries without the shard key (e.g. <code>SELECT * WHERE status = 'active'</code>) must query all shards in parallel and merge results, which increases tail latency.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+    </div>
+
+    <!-- TAB: System Design Scenarios -->
+    <div class="tab-content" id="tab-scenarios">
+      <div class="sysdesign-lab-grid">
+        
+        <!-- Scenarios Sub-navigation Bar -->
+        <div class="card" style="padding: 14px 18px;">
+          <div class="scenarios-subnav">
+            <button class="scenario-nav-btn active" data-scenario="flash-sale">
+              <span class="snb-icon">⚡</span>
+              <div class="snb-text">
+                <strong>1. Flash Sale & Distributed Locks</strong>
+                <span>High Concurrency • Race Conditions • Redis SETNX</span>
+              </div>
+            </button>
+            <button class="scenario-nav-btn" data-scenario="url-shortener">
+              <span class="snb-icon">🔗</span>
+              <div class="snb-text">
+                <strong>2. Distributed URL Shortener (TinyURL)</strong>
+                <span>Base62 • 80/20 Caching • MongoDB • 301 vs 302</span>
+              </div>
+            </button>
+            <button class="scenario-nav-btn" data-scenario="rate-limiter">
+              <span class="snb-icon">🛡️</span>
+              <div class="snb-text">
+                <strong>3. Token Bucket API Rate Limiter</strong>
+                <span>DDoS Mitigation • 429 Too Many Requests • Sliding Window</span>
+              </div>
+            </button>
+            <button class="scenario-nav-btn" data-scenario="social-feed">
+              <span class="snb-icon">📱</span>
+              <div class="snb-text">
+                <strong>4. Social Feed & Fan-Out (Twitter/X)</strong>
+                <span>Fan-out on Write vs Read • Timeline Caching • Queues</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- SCENARIO 1: Flash Sale & Distributed Lock -->
+        <div class="scenario-view active" id="view-flash-sale">
+          <div class="card lab-arch-card">
+            <div class="card-title-row">
+              <div>
+                <span class="pill-badge pill-purple">System Design Scenario 1</span>
+                <h3>High-Concurrency Flash Sale (Atomic Inventory & Redis Distributed Lock)</h3>
+              </div>
+              <div class="flash-stock-hud">
+                <span class="fsh-label">Available Tickets/Items:</span>
+                <span class="fsh-val" id="fs-stock-count">10</span>
+                <span class="fsh-tag text-green" id="fs-stock-tag">IN STOCK</span>
+              </div>
+            </div>
+
+            <!-- Visual Flash Sale Flow -->
+            <div class="scenario-arch-stage">
+              <div class="sc-node" id="fs-node-shoppers">
+                <div class="sc-icon">👥</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">100 CONCURRENT USERS</span>
+                  <h4>Shoppers Rush</h4>
+                  <p class="node-mono" id="fs-shoppers-stat">Idle</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="fs-node-redis-lock">
+                <div class="sc-icon">🔒</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-redis">REDIS DISTRIBUTED LOCK</span>
+                  <h4>SETNX stock_lock</h4>
+                  <p class="node-mono" id="fs-lock-stat">TTL: 2000ms</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="fs-node-queue">
+                <div class="sc-icon">📨</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">RABBITMQ QUEUE</span>
+                  <h4>orders.flash.queue</h4>
+                  <p class="node-mono" id="fs-queue-stat">0 buffered</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="fs-node-postgres">
+                <div class="sc-icon">🗄️</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-db">POSTGRESQL (ACID)</span>
+                  <h4>Orders Table</h4>
+                  <p class="node-mono" id="fs-db-stat">0 committed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sysdesign-two-col">
+            <div class="card">
+              <h3>Flash Sale Simulator</h3>
+              <p class="section-lead">Simulate a high-concurrency surge of 50 simultaneous checkout requests competing for only 10 available tickets.</p>
+              
+              <div class="cache-actions-grid">
+                <button id="btn-fs-rush" class="btn btn-primary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                  Trigger 50 Concurrent Shoppers Rush
+                </button>
+                <button id="btn-fs-single" class="btn btn-secondary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                  Buy Single Ticket (1 User)
+                </button>
+                <button id="btn-fs-reset" class="btn btn-outline">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  Restock Inventory (Reset to 10)
+                </button>
+              </div>
+
+              <div class="cache-telemetry-banner" id="fs-telemetry-banner">
+                <div class="ctb-status" id="fs-badge">READY</div>
+                <div class="ctb-details" id="fs-details">Click "Trigger 50 Concurrent Shoppers Rush" to observe distributed locking in action.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>System Design Architecture Takeaways</h3>
+              <div class="sharding-explainer">
+                <div class="se-item">
+                  <strong>1. The Database Crash Anti-Pattern</strong>
+                  <p>Hitting PostgreSQL directly with 50,000 concurrent <code>UPDATE items SET stock = stock - 1 WHERE id = 1</code> causes row-lock contention and exhausts connection pools, taking down the entire database.</p>
+                </div>
+                <div class="se-item">
+                  <strong>2. Redis Atomic Decrement + Lua Scripting</strong>
+                  <p>In-memory Redis handles 100k+ ops/sec. Using <code>DECR</code> in Redis evaluates in sub-millisecond time. Once stock reaches 0, excess requests are rejected with <code>409 Conflict</code> without touching SQL!</p>
+                </div>
+                <div class="se-item">
+                  <strong>3. Decoupled Message Queue Persistence</strong>
+                  <p>The 10 lucky buyers are pushed to a RabbitMQ queue, letting background workers write to PostgreSQL at a safe, throttled rate.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCENARIO 2: URL Shortener (TinyURL) -->
+        <div class="scenario-view" id="view-url-shortener">
+          <div class="card lab-arch-card">
+            <div class="card-title-row">
+              <div>
+                <span class="pill-badge pill-cyan">System Design Scenario 2</span>
+                <h3>Distributed URL Shortener (TinyURL / Bitly with Base62 & Redis 80/20 Cache)</h3>
+              </div>
+              <div class="flash-stock-hud">
+                <span class="fsh-label">Base62 URL Registry:</span>
+                <span class="fsh-val" id="url-registry-count">3 URLs</span>
+              </div>
+            </div>
+
+            <div class="scenario-arch-stage">
+              <div class="sc-node" id="url-node-client">
+                <div class="sc-icon">🌐</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">CLIENT</span>
+                  <h4>Browser Redirect</h4>
+                  <p class="node-mono">sho.rt/:code</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="url-node-hasher">
+                <div class="sc-icon">⚙️</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">BASE62 ENCODER</span>
+                  <h4>MurmurHash / ID</h4>
+                  <p class="node-mono" id="url-hasher-code">sho.rt/7aB9x</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="url-node-redis">
+                <div class="sc-icon">⚡</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-redis">REDIS (80% READS)</span>
+                  <h4>Hot URL Cache</h4>
+                  <p class="node-mono" id="url-cache-stat">~1.1ms latency</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="url-node-mongo">
+                <div class="sc-icon">🍃</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-green">MONGODB STORE</span>
+                  <h4>url_mappings</h4>
+                  <p class="node-mono">BSON Document</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sysdesign-two-col">
+            <div class="card">
+              <h3>URL Shortener Simulator</h3>
+              <p class="section-lead">Create short links using <strong>Base62 Encoding</strong> and test <strong>301 Permanent</strong> vs <strong>302 Found</strong> redirect resolutions.</p>
+
+              <div class="form-group">
+                <label>Long Target URL:</label>
+                <input type="text" id="url-input-long" class="input-url" value="https://kubernetes.io/docs/concepts/architecture/">
+              </div>
+
+              <div class="cache-actions-grid">
+                <button id="btn-url-shorten" class="btn btn-primary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  Shorten URL (Base62 Encode)
+                </button>
+                <button id="btn-url-resolve" class="btn btn-secondary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  Resolve Short URL (Redirect Lookup)
+                </button>
+              </div>
+
+              <div class="cache-telemetry-banner" id="url-telemetry-banner">
+                <div class="ctb-status" id="url-badge">READY</div>
+                <div class="ctb-details" id="url-details">Click "Shorten URL" to generate a short link.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title-row">
+                <h3>Live URL Key-Value Directory</h3>
+                <span class="badge-accent">Base62 Directory</span>
+              </div>
+              <div class="table-wrap">
+                <table class="live-data-table">
+                  <thead>
+                    <tr><th>Short Code</th><th>Destination URL</th><th>Storage</th><th>Clicks</th></tr>
+                  </thead>
+                  <tbody id="url-table-body">
+                    <tr><td><code>sho.rt/k8s9x</code></td><td>https://kubernetes.io/docs/</td><td><span class="synced-chip">REDIS + MONGO</span></td><td>428</td></tr>
+                    <tr><td><code>sho.rt/gh7a1</code></td><td>https://github.com/google/gemini</td><td><span class="synced-chip">REDIS + MONGO</span></td><td>891</td></tr>
+                    <tr><td><code>sho.rt/db4q2</code></td><td>https://postgresql.org/docs/16/</td><td><span class="synced-chip">MONGO ONLY</span></td><td>34</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCENARIO 3: Rate Limiter Token Bucket -->
+        <div class="scenario-view" id="view-rate-limiter">
+          <div class="card lab-arch-card">
+            <div class="card-title-row">
+              <div>
+                <span class="pill-badge pill-purple">System Design Scenario 3</span>
+                <h3>API Rate Limiting (Token Bucket Algorithm & DDoS Defense)</h3>
+              </div>
+              <div class="flash-stock-hud">
+                <span class="fsh-label">Tokens Available:</span>
+                <span class="fsh-val" id="rl-tokens-count">10 / 10</span>
+                <span class="fsh-tag text-green" id="rl-token-tag">HEALTHY</span>
+              </div>
+            </div>
+
+            <div class="scenario-arch-stage">
+              <div class="sc-node" id="rl-node-client">
+                <div class="sc-icon">💻</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">INCOMING TRAFFIC</span>
+                  <h4>Client Requests</h4>
+                  <p class="node-mono" id="rl-req-status">Normal</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="rl-node-bucket">
+                <div class="sc-icon">🪣</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-redis">TOKEN BUCKET (REDIS)</span>
+                  <h4>Capacity: 10 Tokens</h4>
+                  <p class="node-mono">Refill: +2 tokens/sec</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="rl-node-decision">
+                <div class="sc-icon" id="rl-decision-icon">🛡️</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">DECISION GATEWAY</span>
+                  <h4 id="rl-decision-title">HTTP 200 OK</h4>
+                  <p class="node-mono" id="rl-decision-desc">Allow / Reject</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="rl-node-service">
+                <div class="sc-icon">⚡</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">BACKEND CLUSTER</span>
+                  <h4>Protected Microservices</h4>
+                  <p class="node-mono">Zero Overload</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sysdesign-two-col">
+            <div class="card">
+              <h3>Rate Limiter Simulator</h3>
+              <p class="section-lead">Send single requests or blast a 15-request burst to drain the token bucket and trigger <code>HTTP 429 Too Many Requests</code>.</p>
+
+              <div class="cache-actions-grid">
+                <button id="btn-rl-single" class="btn btn-secondary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  Send 1 Request (Consumes 1 Token)
+                </button>
+                <button id="btn-rl-burst" class="btn btn-primary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                  Spam 15 Rapid Requests (Trigger 429 Burst)
+                </button>
+              </div>
+
+              <div class="cache-telemetry-banner" id="rl-telemetry-banner">
+                <div class="ctb-status" id="rl-badge">200 OK</div>
+                <div class="ctb-details" id="rl-details">Bucket is full (10 tokens). Click "Spam 15 Rapid Requests" to test rate-limiting.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Token Bucket Visualizer</h3>
+              <p class="section-lead">Visual representation of Redis token storage with dynamic refill.</p>
+              
+              <div class="token-bucket-visual">
+                <div class="bucket-container" id="bucket-container">
+                  <!-- Tokens injected dynamically -->
+                </div>
+                <div class="bucket-refill-indicator">
+                  <span class="bri-dot"></span> Refilling at <strong>+2 tokens / second</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCENARIO 4: Social Feed Fan-out -->
+        <div class="scenario-view" id="view-social-feed">
+          <div class="card lab-arch-card">
+            <div class="card-title-row">
+              <div>
+                <span class="pill-badge pill-green">System Design Scenario 4</span>
+                <h3>Social Timeline Feed (Twitter/X Fan-Out on Write vs Fan-Out on Read)</h3>
+              </div>
+              <div class="flash-stock-hud">
+                <span class="fsh-label">Active Strategy:</span>
+                <span class="fsh-tag text-cyan" id="sf-mode-tag">HYBRID FAN-OUT</span>
+              </div>
+            </div>
+
+            <div class="scenario-arch-stage">
+              <div class="sc-node" id="sf-node-author">
+                <div class="sc-icon">✍️</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">AUTHOR</span>
+                  <h4 id="sf-author-name">Regular User (50 Follows)</h4>
+                  <p class="node-mono">POST /tweet</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="sf-node-queue">
+                <div class="sc-icon">📨</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag">FAN-OUT QUEUE</span>
+                  <h4>RabbitMQ / Kafka</h4>
+                  <p class="node-mono">fanout.exchange</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="sf-node-redis">
+                <div class="sc-icon">⚡</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-redis">TIMELINE CACHE (REDIS)</span>
+                  <h4>Follower Feeds</h4>
+                  <p class="node-mono">O(1) Instant Read</p>
+                </div>
+              </div>
+              <div class="sc-arrow">➔</div>
+              <div class="sc-node" id="sf-node-mongo">
+                <div class="sc-icon">🍃</div>
+                <div class="sc-meta">
+                  <span class="pnode-tag tag-green">TWEET DOCUMENT STORE</span>
+                  <h4>MongoDB Cluster</h4>
+                  <p class="node-mono">tweets collection</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sysdesign-two-col">
+            <div class="card">
+              <h3>Social Feed Simulator</h3>
+              <p class="section-lead">Compare how the architecture handles a <strong>Regular User</strong> (Fan-out on Write) vs a <strong>Celebrity with 10M Followers</strong> (Fan-out on Read to avoid queue explosion).</p>
+
+              <div class="cache-actions-grid">
+                <button id="btn-sf-regular" class="btn btn-secondary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle></svg>
+                  Post as Regular User (50 Followers - Fan-out on Write)
+                </button>
+                <button id="btn-sf-celebrity" class="btn btn-primary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  Post as Celebrity (1,000,000 Followers - Fan-out on Read)
+                </button>
+              </div>
+
+              <div class="cache-telemetry-banner" id="sf-telemetry-banner">
+                <div class="ctb-status" id="sf-badge">READY</div>
+                <div class="ctb-details" id="sf-details">Click a button to simulate timeline distribution.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Timeline Feed Stream</h3>
+              <div class="feed-posts-stream" id="feed-posts-stream">
+                <div class="feed-post-card">
+                  <div class="fp-header">
+                    <strong>@alex_dev</strong> <span class="fp-time">2m ago</span>
+                  </div>
+                  <p>Microservices with Nginx LB and Redis caching are performing with sub-2ms response times!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB: Enterprise Polyglot DB Scaling & Message Queue -->
+    <div class="tab-content" id="tab-db-scaling">
+      <div class="sysdesign-lab-grid">
+        
+        <!-- Polyglot Architecture Banner -->
+        <div class="card lab-arch-card">
+          <div class="card-title-row">
+            <div>
+              <span class="pill-badge pill-purple">Data Tier Architecture</span>
+              <h3>Enterprise Polyglot Database & Asynchronous Message Queue Studio</h3>
+            </div>
+            <div class="polyglot-badges">
+              <span class="pg-badge badge-postgres">PostgreSQL (ACID)</span>
+              <span class="pg-badge badge-mongo">MongoDB (Docs)</span>
+              <span class="pg-badge badge-redis">Redis (RAM)</span>
+              <span class="pg-badge badge-queue">RabbitMQ (Events)</span>
+            </div>
+          </div>
+
+          <!-- Enterprise Data Pipeline Stage -->
+          <div class="polyglot-pipeline-stage">
+            
+            <!-- Left: Client & Gateway -->
+            <div class="pg-stage-col col-gateway">
+              <div class="pg-node node-gw-poly">
+                <div class="pnode-tag">ENTRYPOINT</div>
+                <h4>API Gateway Cluster</h4>
+                <p class="node-mono">:8000 ➔ :3004-:3006</p>
+                <div class="pg-route-label">Routes Traffic by Service Domain</div>
+              </div>
+            </div>
+
+            <!-- Arrow -->
+            <div class="sc-arrow">➔</div>
+
+            <!-- Middle: Polyglot Storage Tier -->
+            <div class="pg-stage-col col-databases">
+              
+              <!-- PostgreSQL Card -->
+              <div class="pg-db-card card-pg-postgres" id="pgnode-postgres">
+                <div class="pdb-top">
+                  <span class="pdb-tag tag-postgres">RELATIONAL ACID</span>
+                  <span class="synced-chip">PORT 5432</span>
+                </div>
+                <div class="pdb-body">
+                  <div class="pdb-icon">🐘</div>
+                  <div class="pdb-info">
+                    <h4>PostgreSQL</h4>
+                    <p class="node-mono">Orders, Payments, Balances</p>
+                    <span class="pdb-feature">PgBouncer Pool • Master-Replica WAL</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MongoDB Card -->
+              <div class="pg-db-card card-pg-mongo" id="pgnode-mongo">
+                <div class="pdb-top">
+                  <span class="pdb-tag tag-mongo">DOCUMENT NOSQL</span>
+                  <span class="synced-chip">PORT 27017</span>
+                </div>
+                <div class="pdb-body">
+                  <div class="pdb-icon">🍃</div>
+                  <div class="pdb-info">
+                    <h4>MongoDB</h4>
+                    <p class="node-mono">Product Catalogs, User Profiles</p>
+                    <span class="pdb-feature">BSON Collections • Replica Sets</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Redis Card -->
+              <div class="pg-db-card card-pg-redis" id="pgnode-redis">
+                <div class="pdb-top">
+                  <span class="pdb-tag tag-redis">IN-MEMORY CACHE & LOCKS</span>
+                  <span class="synced-chip">PORT 6379</span>
+                </div>
+                <div class="pdb-body">
+                  <div class="pdb-icon">⚡</div>
+                  <div class="pdb-info">
+                    <h4>Redis</h4>
+                    <p class="node-mono">Hot Sessions, Stock Locks (SETNX)</p>
+                    <span class="pdb-feature">Sub-millisecond RAM • Pub/Sub</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Arrow -->
+            <div class="sc-arrow">➔</div>
+
+            <!-- Right: Async Queue & Background Workers -->
+            <div class="pg-stage-col col-queue-workers">
+              
+              <!-- RabbitMQ Node -->
+              <div class="pg-queue-node" id="pgnode-queue">
+                <div class="pq-header">
+                  <span class="pdb-tag tag-queue">ASYNC MESSAGE BROKER</span>
+                  <span class="queue-depth-chip" id="poly-queue-depth">Queue Depth: 0</span>
+                </div>
+                <h4>RabbitMQ / Kafka</h4>
+                <p class="node-mono">Exchange: orders.events (Topic)</p>
+                <div class="queue-packet-stream" id="poly-queue-stream">
+                  <div class="qp-idle">Queue buffer idle</div>
+                </div>
+              </div>
+
+              <!-- 3 Concurrent Workers -->
+              <div class="workers-grid">
+                <div class="worker-card" id="worker-payment">
+                  <div class="wc-header"><span class="wc-dot"></span> <strong>Payment Worker</strong></div>
+                  <span class="wc-status" id="wstatus-payment">IDLE</span>
+                </div>
+                <div class="worker-card" id="worker-email">
+                  <div class="wc-header"><span class="wc-dot"></span> <strong>Email Notification</strong></div>
+                  <span class="wc-status" id="wstatus-email">IDLE</span>
+                </div>
+                <div class="worker-card" id="worker-inventory">
+                  <div class="wc-header"><span class="wc-dot"></span> <strong>Inventory Catalog</strong></div>
+                  <span class="wc-status" id="wstatus-inventory">IDLE</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Interactive Workbench & Scenarios -->
+        <div class="sysdesign-two-col">
+          <!-- Control Panel -->
+          <div class="card">
+            <h3>Polyglot & Async Queue Operations</h3>
+            <p class="section-lead">Dispatch transactions that interact with <strong>PostgreSQL, MongoDB, Redis, and RabbitMQ</strong> concurrently.</p>
+
+            <div class="cache-actions-grid">
+              <button id="btn-poly-order" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Execute Full Distributed Checkout Flow
+              </button>
+              <button id="btn-poly-burst" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Queue Surge Burst (15 Rapid Events)
+              </button>
+              <button id="btn-poly-dlq" class="btn btn-outline btn-danger">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Simulate Poison Pill ➔ Dead-Letter Queue (DLQ)
+              </button>
+            </div>
+
+            <!-- Telemetry Banner -->
+            <div class="cache-telemetry-banner" id="poly-telemetry-banner">
+              <div class="ctb-status" id="poly-badge">IDLE</div>
+              <div class="ctb-details" id="poly-details">Click "Execute Full Distributed Checkout Flow" to trigger the polyglot data pipeline.</div>
+            </div>
+          </div>
+
+          <!-- Polyglot Comparison Matrix -->
+          <div class="card">
+            <h3>Polyglot Persistence Comparison Matrix</h3>
+            <div class="table-wrap">
+              <table class="live-data-table">
+                <thead>
+                  <tr><th>Technology</th><th>Best Used For</th><th>Consistency</th><th>Latency</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>PostgreSQL</strong></td>
+                    <td>Financial transactions, ACID orders, foreign keys</td>
+                    <td><span class="synced-chip">STRICT ACID</span></td>
+                    <td>8 - 25ms</td>
+                  </tr>
+                  <tr>
+                    <td><strong>MongoDB</strong></td>
+                    <td>Product catalogs, user profiles, flexible schemas</td>
+                    <td><span class="synced-chip">EVENTUAL / REPLICA</span></td>
+                    <td>4 - 15ms</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Redis</strong></td>
+                    <td>Distributed locks, sessions, hot item caching</td>
+                    <td><span class="synced-chip">IN-MEMORY</span></td>
+                    <td>0.8 - 2ms</td>
+                  </tr>
+                  <tr>
+                    <td><strong>RabbitMQ</strong></td>
+                    <td>Asynchronous event buffering, worker distribution</td>
+                    <td><span class="synced-chip">AT-LEAST-ONCE</span></td>
+                    <td>Async</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+      <div class="learn-grid">
+        <!-- Card 1 -->
+        <div class="card concept-card">
+          <div class="concept-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"></path><path d="m15 9 6-6"></path></svg>
+          </div>
+          <h3>1. Nginx Layer 7 Load Balancing</h3>
+          <p>Nginx acts as the front-door reverse proxy on port <code>8000</code>. It distributes incoming HTTP requests across the 3 API Gateway replicas using <strong>Round-Robin</strong> algorithms:</p>
+          <div class="code-preview-box">
+            <code>upstream gateway-cluster {<br>&nbsp;&nbsp;server gateway-1:3000;<br>&nbsp;&nbsp;server gateway-2:3000;<br>&nbsp;&nbsp;server gateway-3:3000;<br>}</code>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card concept-card">
+          <div class="concept-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </div>
+          <h3>2. API Gateway Pattern & Path Rewriting</h3>
+          <p>The API Gateway decouples clients from microservice topology. Using <code>express-http-proxy</code>, it strips path prefixes and attaches telemetry headers:</p>
+          <div class="code-preview-box">
+            <code>/auth/health     ➔ auth_service:3001/health<br>/products/health ➔ product_service:3002/health<br>/orders/health   ➔ order_service:3003/health</code>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card concept-card">
+          <div class="concept-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <h3>3. Centralized CORS & Security Boundary</h3>
+          <p>Without an API Gateway, every microservice must manage its own CORS headers, rate limiting, and JWT validation. The API Gateway centralizes CORS and preflight <code>OPTIONS</code> handling in one single layer.</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card concept-card">
+          <div class="concept-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          </div>
+          <h3>4. Microservice Decoupling & Independent Scaling</h3>
+          <p>Each service (Auth, Product, Order) runs in isolation. If Product Service experiences high traffic, we can scale it independently without modifying client endpoints or redeploying Auth.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Node Details Modal -->
+  <div class="modal-overlay" id="node-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Node Details</h3>
+        <button class="modal-close" onclick="closeNodeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-content">
+        <!-- Content injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

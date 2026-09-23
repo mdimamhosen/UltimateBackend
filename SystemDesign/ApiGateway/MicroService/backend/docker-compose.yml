@@ -1,0 +1,80 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway-1
+      - gateway-2
+      - gateway-3
+
+  gateway-1:
+    build: ./gateway
+    env_file:
+      - ./gateway/.env
+    ports:
+      - "3004:3000"
+    environment:
+      SERVER_NAME: gateway-1
+      AUTH_SERVICE_URL: http://auth_service:3001
+      PRODUCT_SERVICE_URL: http://product_service:3002
+      ORDER_SERVICE_URL: http://order_service:3003
+    depends_on:
+      - auth_service
+      - product_service
+      - order_service
+
+  gateway-2:
+    build: ./gateway
+    env_file:
+      - ./gateway/.env
+    ports:
+      - "3005:3000"
+    environment:
+      SERVER_NAME: gateway-2
+      AUTH_SERVICE_URL: http://auth_service:3001
+      PRODUCT_SERVICE_URL: http://product_service:3002
+      ORDER_SERVICE_URL: http://order_service:3003
+    depends_on:
+      - auth_service
+      - product_service
+      - order_service
+
+  gateway-3:
+    build: ./gateway
+    env_file:
+      - ./gateway/.env
+    ports:
+      - "3006:3000"
+    environment:
+      SERVER_NAME: gateway-3
+      AUTH_SERVICE_URL: http://auth_service:3001
+      PRODUCT_SERVICE_URL: http://product_service:3002
+      ORDER_SERVICE_URL: http://order_service:3003
+    depends_on:
+      - auth_service
+      - product_service
+      - order_service
+
+  auth_service:
+    build: ./services/auth
+    env_file:
+      - ./services/auth/.env
+    ports:
+      - "3001:3001"
+
+  product_service:
+    build: ./services/product
+    env_file:
+      - ./services/product/.env
+    ports:
+      - "3002:3002"
+
+  order_service:
+    build: ./services/order
+    env_file:
+      - ./services/order/.env
+    ports:
+      - "3003:3003"
