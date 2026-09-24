@@ -22,7 +22,7 @@ Content-Type: application/json
 	"text": "Hello Imam, this is your Node server speaking."
 }
 
-### Generate text
+### AI StateGraph
 POST http://localhost:3000/ai
 Content-Type: application/json
 

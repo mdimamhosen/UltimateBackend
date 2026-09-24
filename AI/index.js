@@ -4,40 +4,63 @@ const path = require('path');
 const express = require('express');
 const { ChatGoogleGenerativeAI } = require('@langchain/google-genai');
 const say = require('say');
+const { Annotation, StateGraph } = require('@langchain/langgraph');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const llm = new ChatGoogleGenerativeAI({
     model: 'gemini-2.5-pro',
-    temperature: 0.7, // Adjust the temperature for more or less randomness in responses
-    maxOutputTokens: 200, // Limit the output to 200 tokens
-    maxTokens: 30, // Limit the response to 30 tokens
-    maxRetries: 3, // Retry up to 3 times in case of failures
+    temperature: 0.7,
+    maxRetries: 3,
+});
 
-
+const state = Annotation.Root({
+    prompt: Annotation,
+    aiMsg: Annotation,
+    userMsg: Annotation,
+    response: Annotation,
+    confidence: Annotation,
 })
 
-
-app.post("/ai", async (req, res) => {
-    const { prompt } = req.body;
+const callLLM = async (state) => {
+    console.log("Current state:", state);
+    const prompt = state.prompt;
     const response = await llm.invoke([
         {
             role: "user",
             content: prompt,
-        }, {
-            role: "system",
-            content: "You are a helpful assistant that provides concise and accurate answers to user questions.",
-        }, {
-            role: "assistant",
-            content: "Please provide a clear and concise response to the user's prompt.",
         }
     ]);
-    return res.json({ response: response.content });
-})
+    const textContent = typeof response.content === 'string'
+        ? response.content
+        : Array.isArray(response.content)
+            ? response.content.map((part) => (typeof part === 'string' ? part : part.text || '')).join('')
+            : String(response.content || '');
+    return { aiMsg: textContent, response: textContent, confidence: null };
+}
+
+const graph = new StateGraph(state).addNode("agent", callLLM).addEdge("__start__", "agent").addEdge("agent", "__end__").compile();
+
+app.post("/ai", async (req, res) => {
+    try {
+        const { prompt } = req.body || {};
+
+        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+            return res.status(400).json({ error: 'Prompt is required' });
+        }
+
+        const response = await graph.invoke({ prompt: prompt.trim() });
+        return res.json({ response: response.response, confidence: response.confidence });
+    } catch (error) {
+        console.error("AI route error:", error);
+        return res.status(500).json({ error: error.message || 'Failed to process AI request' });
+    }
+});
 
 async function generateText(prompt) {
     if (!llm) {
@@ -86,7 +109,7 @@ async function generateText(prompt) {
 
 
 app.post('/generate-text', async (request, response) => {
-    const { prompt } = request.body;
+    const { prompt } = request.body || {};
 
     if (!prompt || typeof prompt !== 'string') {
         return response.status(400).json({ error: 'Prompt is required' });
@@ -102,7 +125,7 @@ app.post('/generate-text', async (request, response) => {
 });
 
 app.post('/speak', (request, response) => {
-    const { text, voice, speed } = request.body;
+    const { text, voice, speed } = request.body || {};
 
     if (!text || typeof text !== 'string') {
         return response.status(400).json({ error: 'Text is required' });
