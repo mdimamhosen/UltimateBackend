@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node AI Console</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <p class="eyebrow">NODE AI CONSOLE</p>
+        <h1>Ask. Generate. Speak.</h1>
+      </div>
+      <span class="status"><span class="status-dot"></span> online</span>
+    </header>
+
+    <section class="workspace" aria-label="AI workspace">
+      <form id="prompt-form" class="form">
+        <label>
+          Prompt
+          <textarea id="prompt" name="prompt" rows="7" placeholder="Ask something..."></textarea>
+        </label>
+
+        <div class="actions">
+          <button class="button button-primary" type="submit" id="generate-button">Generate answer</button>
+          <button class="button button-secondary" type="button" id="speak-button">Speak answer</button>
+          <button class="button button-secondary" type="button" id="stop-button">Stop voice</button>
+        </div>
+        <div class="speech-controls">
+          <label>
+            Voice
+            <select id="voice" name="voice">
+              <option value="">System default</option>
+            </select>
+          </label>
+          <label>
+            Speed <output id="speed-value">1.0x</output>
+            <input id="speed" name="speed" type="range" min="0.5" max="2" step="0.1" value="1">
+          </label>
+        </div>
+        <p id="status-message" class="status-message" role="status"></p>
+      </form>
+
+      <section class="result-panel" aria-live="polite">
+        <div class="result-heading">
+          <span>Response</span>
+          <span id="response-label">Waiting</span>
+        </div>
+        <p id="confidence" class="confidence">Confidence: --</p>
+        <p id="result" class="result">Your generated response will appear here.</p>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jev Decision Desk</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="kicker">SYSTEM ONE / DECISION DEMO</p>
+        <h1>Jev Decision Desk</h1>
+      </div>
+      <a href="/api/schema" target="_blank">View schema</a>
+    </header>
+
+    <section class="intro">
+      <p>Turn an unstructured customer message into a strict routing decision.</p>
+      <span>LOCAL DEMO</span>
+    </section>
+
+    <section class="grid">
+      <form id="classify-form" class="input-panel">
+        <label for="input">Customer message</label>
+        <textarea id="input" rows="8" placeholder="I forgot my password and can't log in."></textarea>
+        <div class="examples" aria-label="Example messages">
+          <button type="button" data-example="I want to cancel my subscription and get a refund immediately.">Refund</button>
+          <button type="button" data-example="The login page is broken and I cannot access my account.">Technical</button>
+          <button type="button" data-example="What payment methods do you accept?">Question</button>
+        </div>
+        <button class="classify" type="submit">Classify message <span>→</span></button>
+        <p id="status" role="status"></p>
+      </form>
+
+      <section class="output-panel" aria-live="polite">
+        <div class="output-head">
+          <span>Decision output</span>
+          <span id="confidence">Confidence --</span>
+        </div>
+        <div id="empty" class="empty">Submit a message to see the decision.</div>
+        <div id="decision" class="decision" hidden>
+          <div class="decision-main">
+            <span class="label">Recommended route</span>
+            <strong id="action"></strong>
+          </div>
+          <div class="answer-grid">
+            <article><span>Intent</span><strong id="intent"></strong></article>
+            <article><span>Urgency</span><strong id="urgency"></strong></article>
+            <article><span>Human needed</span><strong id="human"></strong></article>
+          </div>
+          <div class="probability-block">
+            <div class="label">Probabilities</div>
+            <div id="probabilities"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

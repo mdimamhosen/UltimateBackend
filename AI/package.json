@@ -1,0 +1,25 @@
+{
+	"name": "simple-npm-server",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js",
+		"dev": "nodemon index.js"
+	},
+	"description": "",
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"dependencies": {
+		"@google/generative-ai": "^0.24.1",
+		"@langchain/core": "^1.2.12",
+		"@langchain/google-genai": "^2.3.2",
+		"dotenv": "^18.0.3",
+		"express": "^5.2.1",
+		"say": "^0.16.0"
+	},
+	"devDependencies": {
+		"nodemon": "^3.1.14"
+	}
+}

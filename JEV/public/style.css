@@ -1,0 +1,56 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, sans-serif;
+  background: #f2f1ed;
+  color: #111;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #f2f1ed; }
+.shell { width: min(1080px, calc(100% - 40px)); margin: auto; padding: 38px 0 72px; }
+.topbar { display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid #111; padding-bottom: 22px; gap: 20px; }
+.kicker, .label, .output-head, .input-panel > label, .examples button { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.kicker { margin: 0 0 12px; }
+h1 { margin: 0; font: 400 clamp(2.6rem, 8vw, 6.7rem)/.86 Georgia, serif; letter-spacing: -.04em; }
+a { color: #111; font-size: 12px; font-weight: 700; }
+.intro { display: flex; justify-content: space-between; align-items: center; padding: 24px 0 34px; border-bottom: 1px solid #aaa; }
+.intro p { max-width: 440px; margin: 0; font: 22px/1.25 Georgia, serif; }
+.intro span { border: 1px solid #111; padding: 8px 10px; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+.grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 48px; padding-top: 38px; }
+.input-panel, .output-panel { display: grid; gap: 18px; align-content: start; }
+.input-panel > label { margin-bottom: -8px; }
+textarea { width: 100%; min-height: 210px; resize: vertical; border: 1px solid #777; border-radius: 0; background: white; padding: 16px; color: #111; font: 20px/1.4 Georgia, serif; outline: none; }
+textarea:focus { border: 2px solid #111; padding: 15px; }
+.examples { display: flex; flex-wrap: wrap; gap: 7px; }
+.examples button { border: 1px solid #999; background: transparent; color: #333; padding: 8px 9px; cursor: pointer; letter-spacing: .04em; }
+.examples button:hover { border-color: #111; background: #111; color: white; }
+.classify { border: 0; background: #111; color: white; padding: 16px 18px; text-align: left; cursor: pointer; font-size: 13px; font-weight: 700; }
+.classify span { float: right; font-size: 19px; line-height: 12px; }
+.classify:hover { background: #333; }
+#status { min-height: 18px; margin: 0; color: #777; font-size: 12px; }
+.output-panel { min-height: 420px; border-top: 8px solid #111; }
+.output-head { display: flex; justify-content: space-between; border-bottom: 1px solid #aaa; padding: 16px 0; }
+#confidence { color: #777; }
+.empty { padding-top: 35px; color: #777; font: 20px/1.4 Georgia, serif; }
+.decision { display: grid; gap: 28px; }
+.decision-main { display: grid; gap: 8px; padding-top: 8px; }
+.decision-main strong { font: 400 28px/1.15 Georgia, serif; }
+.answer-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #aaa; border-bottom: 1px solid #aaa; }
+.answer-grid article { display: grid; gap: 10px; padding: 16px 12px 16px 0; border-right: 1px solid #aaa; }
+.answer-grid article + article { padding-left: 12px; }
+.answer-grid article:last-child { border: 0; }
+.answer-grid span { color: #777; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.answer-grid strong { font-size: 16px; overflow-wrap: anywhere; }
+.probability-block { display: grid; gap: 14px; }
+#probabilities { display: grid; gap: 10px; }
+.probability { display: grid; grid-template-columns: 125px 1fr 45px; align-items: center; gap: 10px; font-size: 12px; }
+.track { height: 8px; background: #ddd; }
+.track i { display: block; height: 100%; background: #111; }
+@media (max-width: 720px) {
+  .shell { width: min(100% - 28px, 560px); padding-top: 26px; }
+  .topbar, .intro { display: block; }
+  .topbar a, .intro span { display: inline-block; margin-top: 20px; }
+  .grid { grid-template-columns: 1fr; gap: 42px; }
+  .answer-grid { grid-template-columns: 1fr; }
+  .answer-grid article, .answer-grid article + article { padding: 12px 0; border-right: 0; border-bottom: 1px solid #aaa; }
+}

@@ -1,0 +1,31 @@
+### Home
+GET http://localhost:3000/
+
+### Health check
+GET http://localhost:3000/health
+
+### Generate text
+POST http://localhost:3000/generate-text
+Content-Type: application/json
+
+{
+	"name": "Imam",
+	"role": "backend developer",
+	"prompt": "Explain what a load balancer does in one sentence."
+}
+
+### Speak text
+POST http://localhost:3000/speak
+Content-Type: application/json
+
+{
+	"text": "Hello Imam, this is your Node server speaking."
+}
+
+### Generate text
+POST http://localhost:3000/ai
+Content-Type: application/json
+
+{
+	"prompt": "Explain what a load balancer does in one sentence."
+}
