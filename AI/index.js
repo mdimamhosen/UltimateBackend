@@ -6,6 +6,9 @@ const { ChatGoogleGenerativeAI } = require('@langchain/google-genai');
 const say = require('say');
 const { Annotation, StateGraph } = require('@langchain/langgraph');
 
+
+const { ToolNode } = require('@langchain/langgraph/prebuilt');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -44,7 +47,12 @@ const callLLM = async (state) => {
     return { aiMsg: textContent, response: textContent, confidence: null };
 }
 
-const graph = new StateGraph(state).addNode("agent", callLLM).addEdge("__start__", "agent").addEdge("agent", "__end__").compile();
+
+
+const tools = [];
+const toolsNode = new ToolNode(tools)
+
+const graph = new StateGraph(state).addNode("agent", callLLM).addNode("tools", toolsNode).addEdge("__start__", "agent").addEdge("agent", "__end__").compile();
 
 app.post("/ai", async (req, res) => {
     try {
