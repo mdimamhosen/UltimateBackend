@@ -1,6 +1,5 @@
 require('dotenv').config();
 
-const path = require('path');
 const express = require('express');
 const { ChatGoogleGenerativeAI } = require('@langchain/google-genai');
 const say = require('say');
@@ -11,8 +10,6 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 const llm = new ChatGoogleGenerativeAI({
     model: 'gemini-2.5-pro',
@@ -42,7 +39,7 @@ const graph = new StateGraph(MessagesAnnotation)
     .addEdge("agent", "__end__")
     .compile();
 
-app.post("/ai", async (req, res) => {
+app.post('/ai', async (req, res) => {
     try {
         const { prompt } = req.body || {};
 
@@ -83,93 +80,13 @@ async function generateText(prompt) {
     try {
         parsed = JSON.parse(jsonText);
     } catch (error) {
-        parsed = { text: rawText, confidence: null };
+        console.error('AI route error:', error);
+        return res
+            .status(500)
+            .json({ error: error.message || 'Failed to process AI request' });
     }
-
-    const text = String(parsed.text || rawText)
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(/^#{1,6}\s+/gm, '')
-        .replace(/^\s*[-*+]\s+/gm, '')
-        .replace(/^\s*\d+[.)]\s+/gm, '')
-        .replace(/^\s*>\s?/gm, '')
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/__(.*?)__/g, '$1')
-        .replace(/`([^`]+)`/g, '$1')
-        .trim();
-    const confidence = Number(parsed.confidence);
-
-    return {
-        text,
-        confidence: Number.isFinite(confidence)
-            ? Math.max(0, Math.min(100, Math.round(confidence)))
-            : null,
-    };
-}
-
-
-app.post('/generate-text', async (request, response) => {
-    const { prompt } = request.body || {};
-
-    if (!prompt || typeof prompt !== 'string') {
-        return response.status(400).json({ error: 'Prompt is required' });
-    }
-
-    try {
-        const result = await generateText(prompt.trim());
-        response.json(result);
-    } catch (error) {
-        console.error(error.message);
-        response.status(500).json({ error: 'Could not generate text' });
-    }
-});
-
-app.post('/speak', (request, response) => {
-    const { text, voice, speed } = request.body || {};
-
-    if (!text || typeof text !== 'string') {
-        return response.status(400).json({ error: 'Text is required' });
-    }
-
-    const speechSpeed = Number(speed) || 1;
-    if (speechSpeed < 0.5 || speechSpeed > 2) {
-        return response.status(400).json({ error: 'Speed must be between 0.5 and 2' });
-    }
-
-    say.speak(text, voice || undefined, speechSpeed, (error) => {
-        if (error) {
-            console.error(error.message);
-            return response.status(500).json({ error: 'Could not speak text' });
-        }
-
-        response.json({ message: 'Speech completed' });
-    });
-});
-
-app.post('/stop-speech', (request, response) => {
-    say.stop(() => {
-        response.json({ message: 'Speech stopped' });
-    });
-});
-
-app.get('/voices', (request, response) => {
-    say.getInstalledVoices((error, voices) => {
-        if (error) {
-            console.error(error.message);
-            return response.status(500).json({ error: 'Could not load voices' });
-        }
-
-        response.json({ voices });
-    });
-});
-
-app.get('/health', (request, response) => {
-    response.json({ status: 'ok' });
-});
-
-app.use((request, response) => {
-    response.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`LangChain / LangGraph learning server at http://localhost:${port}`);
 });
