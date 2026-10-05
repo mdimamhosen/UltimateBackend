@@ -27,5 +27,5 @@ POST http://localhost:3000/ai
 Content-Type: application/json
 
 {
-	"prompt": "Explain what a load balancer does in one sentence."
+	"prompt": "what is my name ?"
 }
