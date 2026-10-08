@@ -1,27 +1,27 @@
 {
-	"name": "simple-npm-server",
-	"version": "1.0.0",
-	"main": "index.js",
-	"scripts": {
-		"start": "node index.js",
-		"dev": "nodemon index.js"
-	},
-	"description": "",
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"type": "commonjs",
-	"dependencies": {
-		"@google/generative-ai": "^0.24.1",
-		"@langchain/core": "^1.2.12",
-		"@langchain/google-genai": "^2.3.2",
-		"@langchain/langgraph": "^1.4.17",
-		"@langchain/tavily": "^1.2.0",
-		"dotenv": "^18.0.3",
-		"express": "^5.2.1",
-		"say": "^0.16.0"
-	},
-	"devDependencies": {
-		"nodemon": "^3.1.14"
-	}
+  "name": "simple-npm-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node init && node index.js",
+    "dev": "node init && nodemon index.js"
+  },
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/core": "^1.2.12",
+    "@langchain/google-genai": "^2.3.2",
+    "@langchain/langgraph": "^1.4.17",
+    "@langchain/tavily": "^1.2.0",
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
+    "say": "^0.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
 }
